@@ -1,0 +1,1661 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animal Classification Game - Working Version</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            perspective: 1000px;
+            overflow-x: hidden;
+            position: relative;
+            animation: backgroundShift 20s ease-in-out infinite;
+        }
+
+        @keyframes backgroundShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.3) 100%);
+        }
+
+        .star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 3s infinite;
+            box-shadow: 0 0 10px rgba(255,255,255,0.8);
+        }
+
+        @keyframes twinkle {
+            0%, 100% { 
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            50% { 
+                opacity: 1;
+                transform: scale(1.5);
+            }
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 1200px;
+            transform-style: preserve-3d;
+            animation: float 6s ease-in-out infinite;
+            position: relative;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+            background: rgba(255,255,255,0.1);
+            border-radius: 30px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        @keyframes float {
+            0%, 100% { 
+                transform: translateY(0) scale(1);
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            }
+            50% { 
+                transform: translateY(-10px) scale(1.02);
+                box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+            }
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            animation: glow 2s ease-in-out infinite alternate;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 5px 15px rgba(0,0,0,0.3), 0 0 20px rgba(255,255,255,0.5); }
+            to { text-shadow: 0 5px 15px rgba(0,0,0,0.3), 0 0 30px rgba(255,255,255,0.8); }
+        }
+
+        .game-modes {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            padding: 8px 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .mode-btn:hover, .mode-btn.active {
+            background: rgba(52, 152, 219, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .stats-bar {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            padding: 15px 30px;
+            border-radius: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .stat {
+            color: white;
+            font-size: 1.1em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .lives {
+            display: flex;
+            gap: 5px;
+        }
+
+        .heart {
+            font-size: 1.5em;
+            transition: all 0.3s ease;
+        }
+
+        .heart.lost {
+            filter: grayscale(1);
+            opacity: 0.3;
+            transform: scale(0.8);
+        }
+
+        .combo-meter {
+            background: rgba(255,255,255,0.3);
+            height: 6px;
+            border-radius: 3px;
+            width: 100px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .combo-fill {
+            background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .timer-bar {
+            background: rgba(0,0,0,0.3);
+            height: 8px;
+            border-radius: 4px;
+            width: 200px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .timer-fill {
+            background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000);
+            height: 100%;
+            width: 100%;
+            transition: width 0.1s linear;
+        }
+
+        .animals-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 40px;
+            min-height: 180px;
+            padding: 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+            position: relative;
+        }
+
+        .level-indicator {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            padding: 5px 20px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .animal-card {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            position: relative;
+            user-select: none;
+            transform-style: preserve-3d;
+            animation: cardEntrance 0.5s ease-out;
+        }
+
+        @keyframes cardEntrance {
+            from {
+                opacity: 0;
+                transform: translateY(50px) scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .animal-card.mystery {
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+        }
+
+        .animal-card.mystery .animal-emoji {
+            filter: brightness(0) invert(1);
+            opacity: 0.3;
+        }
+
+        .animal-card.mystery .animal-name {
+            display: none;
+        }
+
+        .animal-card.mystery::after {
+            content: '?';
+            position: absolute;
+            font-size: 3em;
+            color: rgba(255,255,255,0.3);
+            font-weight: bold;
+        }
+
+        .animal-card.boss {
+            background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%);
+            animation: bossPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes bossPulse {
+            0%, 100% { box-shadow: 0 10px 25px rgba(0,0,0,0.3), 0 0 30px rgba(255,215,0,0.6); }
+            50% { box-shadow: 0 10px 25px rgba(0,0,0,0.3), 0 0 50px rgba(255,215,0,0.9); }
+        }
+
+        .animal-card:hover {
+            transform: translateY(-10px) scale(1.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+
+        .animal-card.dragging {
+            cursor: grabbing;
+            transform: scale(1.2);
+            opacity: 0.8;
+            z-index: 1000;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+        }
+
+        .animal-emoji {
+            font-size: 3em;
+            margin-bottom: 5px;
+            pointer-events: none;
+        }
+
+        .animal-name {
+            color: white;
+            font-weight: bold;
+            font-size: 0.9em;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .points-value {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255,255,255,0.3);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            color: white;
+            font-weight: bold;
+            pointer-events: none;
+        }
+
+        .categories-container {
+            display: flex;
+            justify-content: space-around;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .category-bucket {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 20px;
+            min-width: 250px;
+            min-height: 300px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            transform-style: preserve-3d;
+        }
+
+        .category-bucket.drag-over {
+            transform: translateY(-5px) scale(1.05);
+            background: rgba(255,255,255,0.25);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3), 0 0 50px rgba(255,255,255,0.3);
+        }
+
+        .category-header {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 20px;
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .category-hint {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #ff5252;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            cursor: help;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .category-bucket:hover .category-hint {
+            opacity: 1;
+        }
+
+        .category-content {
+            min-height: 200px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px;
+            border: 2px dashed rgba(255,255,255,0.3);
+            border-radius: 15px;
+            align-content: flex-start;
+        }
+
+        .category-content .animal-card {
+            width: 80px;
+            height: 80px;
+            animation: dropIn 0.5s ease;
+        }
+
+        .category-content .animal-card .animal-emoji {
+            font-size: 2em;
+        }
+
+        .category-content .animal-card .animal-name {
+            font-size: 0.7em;
+        }
+
+        @keyframes dropIn {
+            from {
+                transform: translateY(-30px) scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .feedback {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: rgba(255,255,255,0.95);
+            padding: 30px 50px;
+            border-radius: 30px;
+            font-size: 2em;
+            font-weight: bold;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            z-index: 2000;
+            animation: feedbackPop 0.6s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        @keyframes feedbackPop {
+            0% { 
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0;
+            }
+            50% { 
+                transform: translate(-50%, -50%) scale(1.2);
+                opacity: 1;
+            }
+            100% { 
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .feedback.correct {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+        }
+
+        .feedback.incorrect {
+            background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
+            color: white;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .control-button {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .control-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+            background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 30px;
+            max-width: 500px;
+            text-align: center;
+            transform: scale(0);
+            animation: modalPop 0.3s ease forwards;
+        }
+
+        @keyframes modalPop {
+            to { transform: scale(1); }
+        }
+
+        .modal-content h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .modal-content p {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        @media (max-width: 768px) {
+            .categories-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .category-bucket {
+                min-width: 280px;
+            }
+
+            .modal-content {
+                max-width: 95vw;
+                padding: 20px 5vw;
+                font-size: 1em;
+            }
+            .modal-content button.control-button {
+                width: 100%;
+                font-size: 1.1em;
+                padding: 18px 0;
+            }
+        }
+
+        .animal-tooltip {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 1000;
+        }
+
+        .animal-card:hover .animal-tooltip {
+            opacity: 1;
+        }
+
+        .category-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            font-size: 0.9em;
+            color: white;
+        }
+
+        .category-info h3 {
+            margin-bottom: 5px;
+            font-size: 1em;
+        }
+
+        .category-info ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .category-info li {
+            margin: 3px 0;
+            padding-left: 15px;
+            position: relative;
+        }
+
+        .category-info li:before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #2BFF88;
+        }
+
+        .category-content {
+            min-height: 200px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px;
+            border: 2px dashed rgba(255,255,255,0.3);
+            border-radius: 15px;
+            align-content: flex-start;
+            transition: all 0.3s ease;
+        }
+
+        .category-content.drag-over {
+            border-color: rgba(255,255,255,0.8);
+            background: rgba(255,255,255,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="stars"><div class="star" style="left: 45.3472%; top: 95.7084%; animation-delay: 0.549761s;"></div><div class="star" style="left: 27.3056%; top: 64.7079%; animation-delay: 2.14185s;"></div><div class="star" style="left: 11.5056%; top: 49.9418%; animation-delay: 1.94674s;"></div><div class="star" style="left: 38.0004%; top: 30.5886%; animation-delay: 0.453291s;"></div><div class="star" style="left: 74.7262%; top: 47.7623%; animation-delay: 2.61514s;"></div><div class="star" style="left: 0.943716%; top: 67.0333%; animation-delay: 0.712146s;"></div><div class="star" style="left: 77.9696%; top: 25.3945%; animation-delay: 1.95012s;"></div><div class="star" style="left: 89.5956%; top: 74.8978%; animation-delay: 2.33846s;"></div><div class="star" style="left: 44.4498%; top: 67.7724%; animation-delay: 2.19155s;"></div><div class="star" style="left: 31.2216%; top: 27.7203%; animation-delay: 0.397856s;"></div><div class="star" style="left: 0.425105%; top: 52.0544%; animation-delay: 1.33173s;"></div><div class="star" style="left: 9.36617%; top: 90.8462%; animation-delay: 1.76058s;"></div><div class="star" style="left: 74.4469%; top: 53.7487%; animation-delay: 1.59008s;"></div><div class="star" style="left: 92.332%; top: 67.3415%; animation-delay: 1.95603s;"></div><div class="star" style="left: 1.74939%; top: 15.588%; animation-delay: 1.97792s;"></div><div class="star" style="left: 93.9962%; top: 54.284%; animation-delay: 0.669141s;"></div><div class="star" style="left: 2.42061%; top: 43.6415%; animation-delay: 2.20109s;"></div><div class="star" style="left: 39.9034%; top: 91.9204%; animation-delay: 2.43633s;"></div><div class="star" style="left: 47.442%; top: 21.9555%; animation-delay: 1.06326s;"></div><div class="star" style="left: 15.2566%; top: 98.464%; animation-delay: 0.103133s;"></div><div class="star" style="left: 58.668%; top: 59.5142%; animation-delay: 1.38903s;"></div><div class="star" style="left: 52.2746%; top: 61.8814%; animation-delay: 1.21265s;"></div><div class="star" style="left: 34.8808%; top: 99.1914%; animation-delay: 1.41804s;"></div><div class="star" style="left: 14.465%; top: 62.749%; animation-delay: 1.98626s;"></div><div class="star" style="left: 84.4225%; top: 39.483%; animation-delay: 1.77765s;"></div><div class="star" style="left: 48.7526%; top: 76.0746%; animation-delay: 2.48598s;"></div><div class="star" style="left: 99.6724%; top: 30.0523%; animation-delay: 2.12485s;"></div><div class="star" style="left: 53.5061%; top: 41.2538%; animation-delay: 1.14804s;"></div><div class="star" style="left: 88.5421%; top: 35.6333%; animation-delay: 0.70734s;"></div><div class="star" style="left: 71.3609%; top: 39.4208%; animation-delay: 0.0887653s;"></div><div class="star" style="left: 3.96474%; top: 29.6897%; animation-delay: 2.07969s;"></div><div class="star" style="left: 52.0255%; top: 39.0553%; animation-delay: 0.434196s;"></div><div class="star" style="left: 91.6519%; top: 77.0246%; animation-delay: 1.52067s;"></div><div class="star" style="left: 73.029%; top: 86.7077%; animation-delay: 0.652103s;"></div><div class="star" style="left: 26.0441%; top: 49.9081%; animation-delay: 1.36627s;"></div><div class="star" style="left: 12.6233%; top: 69.153%; animation-delay: 0.194319s;"></div><div class="star" style="left: 1.16033%; top: 52.471%; animation-delay: 1.17681s;"></div><div class="star" style="left: 10.1439%; top: 81.5543%; animation-delay: 1.28916s;"></div><div class="star" style="left: 43.8717%; top: 98.2191%; animation-delay: 0.0120008s;"></div><div class="star" style="left: 34.6823%; top: 93.248%; animation-delay: 1.17337s;"></div><div class="star" style="left: 90.8621%; top: 50.1469%; animation-delay: 1.68497s;"></div><div class="star" style="left: 25.3597%; top: 36.1187%; animation-delay: 0.141278s;"></div><div class="star" style="left: 55.7945%; top: 48.6786%; animation-delay: 2.78267s;"></div><div class="star" style="left: 37.2885%; top: 40.6495%; animation-delay: 1.42678s;"></div><div class="star" style="left: 57.1707%; top: 60.5537%; animation-delay: 1.3941s;"></div><div class="star" style="left: 13.8407%; top: 19.579%; animation-delay: 0.767047s;"></div><div class="star" style="left: 56.7702%; top: 54.1284%; animation-delay: 2.59246s;"></div><div class="star" style="left: 23.9047%; top: 35.3768%; animation-delay: 1.62634s;"></div><div class="star" style="left: 3.61039%; top: 46.0442%; animation-delay: 0.50554s;"></div><div class="star" style="left: 99.1859%; top: 55.0792%; animation-delay: 2.65922s;"></div></div>
+    
+    <div class="game-container">
+        <h1>🐘 Animal Categorization Game 🦁</h1>
+        
+        <div class="game-modes">
+            <button class="mode-btn active" onclick="setGameMode('classic')">Classic</button>
+            <button class="mode-btn" onclick="setGameMode('timed')">Time Attack</button>
+        </div>
+        
+        <div class="stats-bar">
+            <div class="stat">Level: <span id="level">1</span></div>
+            <div class="stat">Score: <span id="score">0</span></div>
+            <div class="stat">XP: <span id="xp">0</span>/100</div>
+            <div class="stat">
+                <div class="lives" id="lives">
+                    <span class="heart">❤️</span>
+                    <span class="heart">❤️</span>
+                    <span class="heart">❤️</span>
+                </div>
+            </div>
+            <div class="stat">
+                Combo: <span id="combo">0</span>x
+                <div class="combo-meter">
+                    <div class="combo-fill" id="comboFill" style="width: 0%;"></div>
+                </div>
+            </div>
+            <div class="stat" style="display: none;" id="timerStat">
+                <div class="timer-bar" id="timerBar">
+                    <div class="timer-fill" id="timerFill"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="animals-container" id="animalsContainer">
+            <div class="level-indicator">Level <span id="currentLevel">1</span></div>
+        <div class="animal-card" draggable="true" data-category="mammals" data-name="Dog" data-points="10" data-description="Domesticated carnivore, loyal companion">
+                <div class="animal-emoji">🐕</div>
+                <div class="animal-name">Dog</div>
+                
+                <div class="animal-tooltip">Domesticated carnivore, loyal companion</div>
+            </div><div class="animal-card" draggable="true" data-category="mammals" data-name="Lion" data-points="10" data-description="Apex predator with a mane, lives in prides">
+                <div class="animal-emoji">🦁</div>
+                <div class="animal-name">Lion</div>
+                
+                <div class="animal-tooltip">Apex predator with a mane, lives in prides</div>
+            </div><div class="animal-card" draggable="true" data-category="reptiles" data-name="Crocodile" data-points="10" data-description="Large aquatic predator with armored skin">
+                <div class="animal-emoji">🐊</div>
+                <div class="animal-name">Crocodile</div>
+                
+                <div class="animal-tooltip">Large aquatic predator with armored skin</div>
+            </div><div class="animal-card" draggable="true" data-category="amphibians" data-name="Frog" data-points="10" data-description="Leaping amphibian, starts as a tadpole">
+                <div class="animal-emoji">🐸</div>
+                <div class="animal-name">Frog</div>
+                
+                <div class="animal-tooltip">Leaping amphibian, starts as a tadpole</div>
+            </div><div class="animal-card" draggable="true" data-category="reptiles" data-name="Turtle" data-points="10" data-description="Shelled reptile, lives long lives">
+                <div class="animal-emoji">🐢</div>
+                <div class="animal-name">Turtle</div>
+                
+                <div class="animal-tooltip">Shelled reptile, lives long lives</div>
+            </div><div class="animal-card" draggable="true" data-category="amphibians" data-name="Toad" data-points="10" data-description="Warty amphibian, lives on land">
+                <div class="animal-emoji">🐸</div>
+                <div class="animal-name">Toad</div>
+                
+                <div class="animal-tooltip">Warty amphibian, lives on land</div>
+            </div></div>
+
+        <div class="categories-container"><div class="category-bucket" data-category="mammals">
+                <div class="category-header">
+                    🦁 Mammals
+                    <div class="category-hint" title="Warm-blooded vertebrates that feed their young with milk">?</div>
+                </div>
+                <div class="category-content"></div>
+                <div class="category-info">
+                    <h3>Characteristics:</h3>
+                    <ul>
+                        <li>Have hair or fur</li><li>Give birth to live young</li><li>Feed milk to babies</li><li>Warm-blooded</li><li>Have lungs to breathe air</li>
+                    </ul>
+                </div>
+            </div><div class="category-bucket" data-category="reptiles">
+                <div class="category-header">
+                    🦎 Reptiles
+                    <div class="category-hint" title="Cold-blooded vertebrates with scaly skin">?</div>
+                </div>
+                <div class="category-content"></div>
+                <div class="category-info">
+                    <h3>Characteristics:</h3>
+                    <ul>
+                        <li>Have scales or scutes</li><li>Lay eggs on land</li><li>Cold-blooded</li><li>Breathe with lungs</li><li>Have dry skin</li>
+                    </ul>
+                </div>
+            </div><div class="category-bucket" data-category="amphibians">
+                <div class="category-header">
+                    🐸 Amphibians
+                    <div class="category-hint" title="Cold-blooded vertebrates that live both in water and on land">?</div>
+                </div>
+                <div class="category-content"></div>
+                <div class="category-info">
+                    <h3>Characteristics:</h3>
+                    <ul>
+                        <li>Have moist skin</li><li>Start life in water</li><li>Can breathe through skin</li><li>Cold-blooded</li><li>Undergo metamorphosis</li>
+                    </ul>
+                </div>
+            </div></div>
+
+        <div class="control-buttons">
+            <button class="control-button" onclick="usePowerUp('hint')">💡 Hint</button>
+            <button class="control-button" onclick="resetGame()">🔄 Reset</button>
+            <button class="control-button" onclick="submitLevel()">✅ Submit</button>
+            <button class="control-button" onclick="showModal('tutorial')">📖 Tutorial</button>
+        </div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="modal-content" id="modalContent">
+            <!-- Modal content will be dynamically inserted -->
+        </div>
+    </div>
+
+    <script>
+        // Animal database
+        const animals = {
+            mammals: [
+                { name: 'Lion', emoji: '🦁', points: 10, description: 'Apex predator with a mane, lives in prides' },
+                { name: 'Elephant', emoji: '🐘', points: 10, description: 'Largest land animal, has a trunk and tusks' },
+                { name: 'Dog', emoji: '🐕', points: 10, description: 'Domesticated carnivore, loyal companion' },
+                { name: 'Cat', emoji: '🐈', points: 10, description: 'Independent feline, excellent hunter' },
+                { name: 'Whale', emoji: '🐋', points: 15, description: 'Largest marine mammal, breathes air' },
+                { name: 'Monkey', emoji: '🐵', points: 10, description: 'Primate with a tail, lives in trees' }
+            ],
+            reptiles: [
+                { name: 'Crocodile', emoji: '🐊', points: 10, description: 'Large aquatic predator with armored skin' },
+                { name: 'Snake', emoji: '🐍', points: 10, description: 'Limbless reptile, some are venomous' },
+                { name: 'Lizard', emoji: '🦎', points: 10, description: 'Scaly reptile, can regenerate tail' },
+                { name: 'Turtle', emoji: '🐢', points: 10, description: 'Shelled reptile, lives long lives' }
+            ],
+            amphibians: [
+                { name: 'Frog', emoji: '🐸', points: 10, description: 'Leaping amphibian, starts as a tadpole' },
+                { name: 'Toad', emoji: '🐸', points: 10, description: 'Warty amphibian, lives on land' },
+                { name: 'Salamander', emoji: '🦎', points: 15, description: 'Lizard-like amphibian, can regenerate limbs' }
+            ]
+        };
+
+        const categoryInfo = {
+            mammals: {
+                title: '🦁 Mammals',
+                description: 'Warm-blooded vertebrates that feed their young with milk',
+                characteristics: [
+                    'Have hair or fur',
+                    'Give birth to live young',
+                    'Feed milk to babies',
+                    'Warm-blooded',
+                    'Have lungs to breathe air'
+                ]
+            },
+            reptiles: {
+                title: '🦎 Reptiles',
+                description: 'Cold-blooded vertebrates with scaly skin',
+                characteristics: [
+                    'Have scales or scutes',
+                    'Lay eggs on land',
+                    'Cold-blooded',
+                    'Breathe with lungs',
+                    'Have dry skin'
+                ]
+            },
+            amphibians: {
+                title: '🐸 Amphibians',
+                description: 'Cold-blooded vertebrates that live both in water and on land',
+                characteristics: [
+                    'Have moist skin',
+                    'Start life in water',
+                    'Can breathe through skin',
+                    'Cold-blooded',
+                    'Undergo metamorphosis'
+                ]
+            }
+        };
+
+        // Game state
+        let gameState = {
+            mode: 'classic',
+            level: 0,  // Start from level 0
+            score: 0,
+            xp: 0,
+            lives: 3,
+            combo: 0,
+            attempts: 0,
+            correct: 0,
+            wrongPlacements: 0,
+            isPaused: false,
+            draggedElement: null,
+            timeRemaining: 60,
+            timerInterval: null,
+            powerUps: {
+                hint: 2
+            },
+            achievements: {
+                perfectLevels: 0,
+                totalAnimals: 0,
+                highestCombo: 0,
+                fastestTime: Infinity
+            },
+            learningProgress: {
+                mammals: { correct: 0, total: 0 },
+                reptiles: { correct: 0, total: 0 },
+                amphibians: { correct: 0, total: 0 }
+            }
+        };
+
+        // Initialize game
+        function initGame() {
+            createStars();
+            
+            // Create category buckets
+            const categoriesContainer = document.querySelector('.categories-container');
+            categoriesContainer.innerHTML = '';
+            Object.keys(categoryInfo).forEach(category => {
+                categoriesContainer.appendChild(createCategoryBucket(category));
+            });
+            
+            // Set up drop zones
+            setupDropZones();
+            
+            loadLevel();
+            updateUI();
+            
+            // Show tutorial on first play
+            if (!localStorage.getItem('tutorialShown')) {
+                setTimeout(() => showModal('tutorial'), 500);
+                localStorage.setItem('tutorialShown', 'true');
+            }
+        }
+
+        // Create starry background
+        function createStars() {
+            const starsContainer = document.querySelector('.stars');
+            for (let i = 0; i < 50; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.animationDelay = Math.random() * 3 + 's';
+                starsContainer.appendChild(star);
+            }
+        }
+
+        // Load level
+        function loadLevel() {
+            const container = document.getElementById('animalsContainer');
+            
+            // Clear existing animals (keep level indicator)
+            const existingAnimals = container.querySelectorAll('.animal-card');
+            existingAnimals.forEach(card => card.remove());
+            
+            // Clear category buckets
+            document.querySelectorAll('.category-content').forEach(content => {
+                content.innerHTML = '';
+            });
+            
+            // Update level indicator
+            document.getElementById('currentLevel').textContent = gameState.level;
+            
+            // Determine animals per category based on level
+            const animalsPerCategory = Math.min(2 + Math.floor(gameState.level / 2), 4);  // Adjusted for level 0
+            const levelAnimals = [];
+            
+            // Select random animals from each category
+            Object.entries(animals).forEach(([category, categoryAnimals]) => {
+                const shuffled = [...categoryAnimals].sort(() => Math.random() - 0.5);
+                for (let i = 0; i < animalsPerCategory && i < shuffled.length; i++) {
+                    const animal = { ...shuffled[i], category };
+                    
+                    // Add mystery animals on higher levels
+                    if (gameState.level > 1 && Math.random() < 0.2) {  // Adjusted for level 0
+                        animal.mystery = true;
+                        animal.points *= 2;
+                    }
+                    
+                    // Add boss animals
+                    if (gameState.level > 3 && Math.random() < 0.1) {  // Adjusted for level 0
+                        animal.boss = true;
+                        animal.points *= 3;
+                    }
+                    
+                    levelAnimals.push(animal);
+                }
+            });
+            
+            // Shuffle and display
+            levelAnimals.sort(() => Math.random() - 0.5);
+            levelAnimals.forEach((animal, index) => {
+                setTimeout(() => {
+                    const card = createAnimalCard(animal);
+                    container.appendChild(card);
+                }, index * 100);
+            });
+            
+            // Start timer for timed mode
+            if (gameState.mode === 'timed') {
+                startTimer();
+            }
+        }
+
+        // Create animal card
+        function createAnimalCard(animal) {
+            const card = document.createElement('div');
+            card.className = 'animal-card';
+            if (animal.mystery) card.classList.add('mystery');
+            if (animal.boss) card.classList.add('boss');
+            
+            card.draggable = true;
+            card.dataset.category = animal.category;
+            card.dataset.name = animal.name;
+            card.dataset.points = animal.points;
+            card.dataset.description = animal.description;
+            
+            card.innerHTML = `
+                <div class="animal-emoji">${animal.emoji}</div>
+                <div class="animal-name">${animal.mystery ? '???' : animal.name}</div>
+                ${animal.boss || animal.mystery ? `<div class="points-value">${animal.points}pts</div>` : ''}
+                <div class="animal-tooltip">${animal.description}</div>
+            `;
+            
+            // Add drag event listeners
+            card.addEventListener('dragstart', handleDragStart);
+            card.addEventListener('dragend', handleDragEnd);
+            
+            // Touch support
+            card.addEventListener('touchstart', handleTouchStart, {passive: false});
+            card.addEventListener('touchmove', handleTouchMove, {passive: false});
+            card.addEventListener('touchend', handleTouchEnd);
+            
+            return card;
+        }
+
+        // Create category bucket
+        function createCategoryBucket(category) {
+            const info = categoryInfo[category];
+            const bucket = document.createElement('div');
+            bucket.className = 'category-bucket';
+            bucket.dataset.category = category;
+            
+            bucket.innerHTML = `
+                <div class="category-header">
+                    ${info.title}
+                    <div class="category-hint" title="${info.description}">?</div>
+                </div>
+                <div class="category-content"></div>
+                <div class="category-info">
+                    <h3>Characteristics:</h3>
+                    <ul>
+                        ${info.characteristics.map(char => `<li>${char}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            
+            return bucket;
+        }
+
+        // Drag handlers
+        function handleDragStart(e) {
+            gameState.draggedElement = e.target;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', e.target.dataset.category);
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            gameState.draggedElement = null;
+        }
+
+        // Touch handlers for mobile
+        let touchItem = null;
+        let touchOffset = {x: 0, y: 0};
+
+        function handleTouchStart(e) {
+            touchItem = e.target.closest('.animal-card');
+            if (!touchItem) return;
+            
+            const touch = e.touches[0];
+            const rect = touchItem.getBoundingClientRect();
+            touchOffset.x = touch.clientX - rect.left;
+            touchOffset.y = touch.clientY - rect.top;
+            
+            touchItem.style.position = 'fixed';
+            touchItem.style.zIndex = '1000';
+            touchItem.classList.add('dragging');
+            gameState.draggedElement = touchItem;
+            
+            // Prevent default to avoid scrolling
+            e.preventDefault();
+        }
+
+        function handleTouchMove(e) {
+            if (!touchItem) return;
+            e.preventDefault();
+            
+            const touch = e.touches[0];
+            touchItem.style.left = touch.clientX - touchOffset.x + 'px';
+            touchItem.style.top = touch.clientY - touchOffset.y + 'px';
+            
+            // Check for potential drop targets
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            const droppable = elementBelow?.closest('.category-bucket');
+            
+            // Remove highlight from all buckets
+            document.querySelectorAll('.category-bucket').forEach(bucket => {
+                bucket.classList.remove('drag-over');
+            });
+            
+            // Highlight current bucket if valid
+            if (droppable) {
+                droppable.classList.add('drag-over');
+            }
+        }
+
+        function handleTouchEnd(e) {
+            if (!touchItem) return;
+            
+            const touch = e.changedTouches[0];
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            const droppable = elementBelow?.closest('.category-bucket');
+            
+            // Reset touch item styles
+            touchItem.style.position = '';
+            touchItem.style.zIndex = '';
+            touchItem.style.left = '';
+            touchItem.style.top = '';
+            touchItem.classList.remove('dragging');
+            
+            // Remove highlight from all buckets
+            document.querySelectorAll('.category-bucket').forEach(bucket => {
+                bucket.classList.remove('drag-over');
+            });
+            
+            if (droppable) {
+                handleDrop({
+                    preventDefault: () => {},
+                    currentTarget: droppable,
+                    dataTransfer: {
+                        getData: () => touchItem.dataset.category
+                    }
+                });
+            }
+            
+            touchItem = null;
+        }
+
+        // Set up drop zones
+        function setupDropZones() {
+            document.querySelectorAll('.category-bucket').forEach(bucket => {
+                bucket.addEventListener('dragover', handleDragOver);
+                bucket.addEventListener('drop', handleDrop);
+                bucket.addEventListener('dragleave', handleDragLeave);
+                bucket.addEventListener('dragenter', handleDragEnter);
+            });
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDragEnter(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            if (gameState.isPaused || !gameState.draggedElement) return;
+            
+            const bucket = e.currentTarget;
+            bucket.classList.remove('drag-over');
+            
+            const bucketCategory = bucket.dataset.category;
+            const animalCategory = gameState.draggedElement.dataset.category;
+            
+            gameState.attempts++;
+            
+            if (bucketCategory === animalCategory) {
+                // Correct placement
+                handleCorrectPlacement(bucket);
+            } else {
+                // Incorrect placement
+                handleIncorrectPlacement();
+            }
+            
+            updateUI();
+        }
+
+        // Handle correct placement
+        function handleCorrectPlacement(bucket) {
+            const card = gameState.draggedElement;
+            const points = parseInt(card.dataset.points);
+            const category = card.dataset.category;
+            
+            // Update learning progress
+            gameState.learningProgress[category].correct++;
+            gameState.learningProgress[category].total++;
+            
+            // Calculate score with bonuses
+            const comboMultiplier = 1 + (gameState.combo * 0.1);
+            const levelBonus = 1 + (gameState.level * 0.05);
+            const timeBonus = gameState.mode === 'timed' ? (1 + (gameState.timeRemaining / 60)) : 1;
+            
+            const finalPoints = Math.floor(points * comboMultiplier * levelBonus * timeBonus);
+            
+            gameState.correct++;
+            gameState.combo++;
+            gameState.score += finalPoints;
+            gameState.xp += 10 + gameState.combo * 2;
+            gameState.achievements.totalAnimals++;
+            
+            // Update highest combo achievement
+            if (gameState.combo > gameState.achievements.highestCombo) {
+                gameState.achievements.highestCombo = gameState.combo;
+            }
+            
+            // Move card to bucket with zoom animation
+            const categoryContent = bucket.querySelector('.category-content');
+            card.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+            card.style.transform = 'scale(1.2)';
+            
+            setTimeout(() => {
+                categoryContent.appendChild(card);
+                card.style.transform = 'scale(1)';
+                card.draggable = false;
+                card.removeEventListener('touchstart', handleTouchStart);
+            }, 250);
+            
+            // Reveal mystery animal with zoom effect
+            if (card.classList.contains('mystery')) {
+                card.classList.remove('mystery');
+                const nameElement = card.querySelector('.animal-name');
+                nameElement.style.opacity = '0';
+                nameElement.style.transform = 'scale(0.8)';
+                nameElement.textContent = card.dataset.name;
+                setTimeout(() => {
+                    nameElement.style.opacity = '1';
+                    nameElement.style.transform = 'scale(1)';
+                }, 300);
+            }
+            
+            // Show enhanced feedback
+            showFeedback(`Perfect! +${finalPoints}pts`, true);
+            
+            // Check if level complete
+            const remainingCards = document.querySelectorAll('#animalsContainer .animal-card');
+            if (remainingCards.length === 0) {
+                setTimeout(() => {
+                    gameState.level++;
+                    showModal('levelComplete', {
+                        level: gameState.level - 1,
+                        score: Math.floor(gameState.score),
+                        accuracy: 100,
+                        learningProgress: calculateLearningProgress(),
+                        achievements: gameState.achievements,
+                        congratsMessage: `🎉 Level ${gameState.level - 1} Complete! Moving to Level ${gameState.level}! 🎉`
+                    });
+                }, 500);
+            }
+            
+            gameState.draggedElement = null;
+        }
+
+        // Add function to calculate learning progress
+        function calculateLearningProgress() {
+            const progress = {};
+            const totalAnimalsPerCategory = {};
+            
+            // Count total animals per category
+            document.querySelectorAll('.animal-card').forEach(card => {
+                const category = card.dataset.category;
+                totalAnimalsPerCategory[category] = (totalAnimalsPerCategory[category] || 0) + 1;
+            });
+            
+            // Count correctly placed animals per category
+            document.querySelectorAll('.category-bucket').forEach(bucket => {
+                const category = bucket.dataset.category;
+                const correctCards = bucket.querySelectorAll('.animal-card');
+                const correctCount = Array.from(correctCards).filter(card => card.dataset.category === category).length;
+                progress[category] = {
+                    correct: correctCount,
+                    total: totalAnimalsPerCategory[category] || 0
+                };
+            });
+            
+            // Calculate percentages
+            return Object.entries(progress).map(([category, stats]) => {
+                const percentage = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
+                return `${category}: ${percentage}%`;
+            }).join(', ');
+        }
+
+        // Handle incorrect placement
+        function handleIncorrectPlacement() {
+            gameState.combo = 0;
+            gameState.wrongPlacements++;
+            gameState.lives--;  // Decrease lives
+            gameState.score = Math.max(0, gameState.score - 5);
+            
+            // Update hearts display
+            const hearts = document.querySelectorAll('.heart');
+            if (hearts[gameState.lives]) {
+                hearts[gameState.lives].classList.add('lost');
+            }
+            
+            showFeedback('Try Again!', false);
+            
+            // Shake animation
+            if (gameState.draggedElement) {
+                gameState.draggedElement.style.animation = 'shake 0.5s ease';
+                setTimeout(() => {
+                    if (gameState.draggedElement) {
+                        gameState.draggedElement.style.animation = '';
+                    }
+                }, 500);
+            }
+            
+            // Check game over after 3 wrong placements or no lives
+            if (gameState.wrongPlacements >= 3 || gameState.lives <= 0) {
+                gameOver();
+            }
+            
+            gameState.draggedElement = null;
+        }
+
+        // Show feedback
+        function showFeedback(message, isCorrect) {
+            const feedback = document.createElement('div');
+            feedback.className = `feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+            feedback.textContent = message;
+            document.body.appendChild(feedback);
+            
+            setTimeout(() => feedback.remove(), 1500);
+        }
+
+        // Update UI
+        function updateUI() {
+            document.getElementById('level').textContent = gameState.level;
+            document.getElementById('score').textContent = Math.floor(gameState.score);
+            document.getElementById('xp').textContent = gameState.xp;
+            document.getElementById('combo').textContent = gameState.combo;
+            
+            // Update combo meter
+            const comboFill = document.getElementById('comboFill');
+            comboFill.style.width = Math.min(gameState.combo * 10, 100) + '%';
+            
+            // Update lives
+            const hearts = document.querySelectorAll('.heart');
+            hearts.forEach((heart, index) => {
+                if (index >= gameState.lives) {
+                    heart.classList.add('lost');
+                } else {
+                    heart.classList.remove('lost');
+                }
+            });
+            
+            // Update power-ups
+            document.getElementById('hintCount').textContent = gameState.powerUps.hint;
+            
+            // Disable power-ups if count is 0
+            Object.entries(gameState.powerUps).forEach(([type, count]) => {
+                const powerUp = document.querySelector(`.power-up[onclick*="${type}"]`);
+                if (powerUp) {
+                    if (count === 0) {
+                        powerUp.classList.add('disabled');
+                    } else {
+                        powerUp.classList.remove('disabled');
+                    }
+                }
+            });
+        }
+
+        // Power-up functions
+        function usePowerUp(type) {
+            if (gameState.isPaused || gameState.powerUps[type] <= 0) return;
+            
+            gameState.powerUps[type]--;
+            
+            if (type === 'hint') {
+                const cards = document.querySelectorAll('#animalsContainer .animal-card');
+                if (cards.length > 0) {
+                    const randomCard = cards[Math.floor(Math.random() * cards.length)];
+                    const category = randomCard.dataset.category;
+                    const bucket = document.querySelector(`.category-bucket[data-category="${category}"]`);
+                    
+                    // Highlight both
+                    randomCard.style.boxShadow = '0 0 30px rgba(255,255,0,0.8)';
+                    bucket.style.boxShadow = '0 0 30px rgba(255,255,0,0.8)';
+                    
+                    setTimeout(() => {
+                        randomCard.style.boxShadow = '';
+                        bucket.style.boxShadow = '';
+                    }, 3000);
+                }
+            }
+            
+            updateUI();
+        }
+
+        // Timer functions
+        function startTimer() {
+            if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+            
+            // Set time limits for time attack mode
+            if (gameState.mode === 'timed') {
+                if (gameState.level === 0 || gameState.level === 1) {
+                    gameState.timeRemaining = 20;
+                } else {
+                    gameState.timeRemaining = 35;
+                }
+            } else {
+                // Classic mode (unchanged)
+                gameState.timeRemaining = 60 + gameState.level * 10;
+            }
+            document.getElementById('timerStat').style.display = 'block';
+            document.getElementById('timerBar').style.display = 'block';
+            
+            const initialTime = gameState.timeRemaining;
+            gameState.timerInterval = setInterval(() => {
+                if (!gameState.isPaused) {
+                    gameState.timeRemaining--;
+                    // Use correct denominator for percentage
+                    let denominator;
+                    if (gameState.mode === 'timed') {
+                        denominator = initialTime;
+                    } else {
+                        denominator = 60 + gameState.level * 10;
+                    }
+                    const percentage = (gameState.timeRemaining / denominator) * 100;
+                    document.getElementById('timerFill').style.width = percentage + '%';
+                    
+                    if (gameState.timeRemaining <= 0) {
+                        clearInterval(gameState.timerInterval);
+                        gameOver();
+                    }
+                }
+            }, 1000);
+        }
+
+        // Complete level
+        function completeLevel() {
+            if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+            
+            const accuracy = gameState.attempts > 0 ? Math.round((gameState.correct / gameState.attempts) * 100) : 0;
+            
+            // Update achievements
+            if (accuracy === 100) {
+                gameState.achievements.perfectLevels++;
+            }
+            
+            if (gameState.mode === 'timed' && gameState.timeRemaining < gameState.achievements.fastestTime) {
+                gameState.achievements.fastestTime = gameState.timeRemaining;
+            }
+            
+            // Calculate learning progress
+            const learningProgress = calculateLearningProgress();
+            
+            // Show congratulatory message based on accuracy
+            let congratsMessage = '';
+            if (accuracy === 100) {
+                congratsMessage = 'Outstanding! Perfect score! 🌟';
+            } else if (accuracy >= 80) {
+                congratsMessage = 'Excellent work! You\'re amazing! 🎉';
+            } else if (accuracy >= 60) {
+                congratsMessage = 'Great job! Keep improving! 💪';
+            } else {
+                congratsMessage = 'Good effort! Keep practicing! 🌱';
+            }
+            
+            // Check if this is the final level (all animals placed correctly)
+            const allAnimalsPlaced = document.querySelectorAll('#animalsContainer .animal-card').length === 0;
+            if (allAnimalsPlaced) {
+                showModal('gameComplete', {
+                    score: Math.floor(gameState.score),
+                    level: gameState.level,
+                    accuracy: accuracy,
+                    learningProgress: learningProgress,
+                    achievements: gameState.achievements,
+                    congratsMessage: '🎉 Congratulations! You\'ve completed the game! 🎉'
+                });
+            } else {
+                showModal('levelComplete', {
+                    level: gameState.level,
+                    score: Math.floor(gameState.score),
+                    accuracy: accuracy,
+                    learningProgress: learningProgress,
+                    achievements: gameState.achievements,
+                    congratsMessage: congratsMessage
+                });
+            }
+        }
+
+        // Game over
+        function gameOver() {
+            if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+            
+            const learningProgress = calculateLearningProgress();
+            
+            showModal('gameOver', {
+                score: Math.floor(gameState.score),
+                level: gameState.level,
+                learningProgress: learningProgress,
+                achievements: gameState.achievements,
+                reason: gameState.wrongPlacements >= 3 ? 'Too many incorrect placements!' : 'Out of lives!'
+            });
+        }
+
+        // Next level
+        function nextLevel() {
+            gameState.combo = 0;
+            gameState.attempts = 0;
+            gameState.correct = 0;
+            gameState.wrongPlacements = 0;
+            
+            // Check XP level up
+            if (gameState.xp >= 100) {
+                gameState.xp -= 100;
+                showFeedback('LEVEL UP! 🎊', true);
+            }
+            
+            // Reset hint power-up every level
+            gameState.powerUps.hint = 2;
+            
+            // Reset hearts
+            document.querySelectorAll('.heart').forEach(heart => {
+                heart.classList.remove('lost');
+            });
+            gameState.lives = 3;
+            
+            hideModal();
+            loadLevel();
+            updateUI();
+        }
+
+        // Game controls
+        function setGameMode(mode) {
+            gameState.mode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (mode === 'expert') {
+                gameState.lives = 1;
+            } else {
+                gameState.lives = 3;
+            }
+            
+            resetGame();
+        }
+
+        function resetGame() {
+            if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+            
+            hideModal(); // Always hide modal at the start of reset
+            
+            gameState = {
+                mode: gameState.mode,
+                level: 0,
+                score: 0,
+                xp: 0,
+                lives: 3,
+                combo: 0,
+                attempts: 0,
+                correct: 0,
+                wrongPlacements: 0,
+                isPaused: false,
+                draggedElement: null,
+                timeRemaining: 60,
+                timerInterval: null,
+                powerUps: {
+                    hint: 2
+                },
+                achievements: {
+                    perfectLevels: 0,
+                    totalAnimals: 0,
+                    highestCombo: 0,
+                    fastestTime: Infinity
+                },
+                learningProgress: {
+                    mammals: { correct: 0, total: 0 },
+                    reptiles: { correct: 0, total: 0 },
+                    amphibians: { correct: 0, total: 0 }
+                }
+            };
+            
+            // Reset hearts display
+            document.querySelectorAll('.heart').forEach(heart => {
+                heart.classList.remove('lost');
+            });
+            
+            document.getElementById('timerStat').style.display = 'none';
+            loadLevel();
+            updateUI();
+        }
+
+        // Modal functions
+        function showModal(type, data = {}) {
+            const modal = document.getElementById('modal');
+            const content = document.getElementById('modalContent');
+            
+            // Prevent background scroll on mobile
+            document.body.style.overflow = 'hidden';
+            
+            switch(type) {
+                case 'tutorial':
+                    content.innerHTML = `
+                        <h2>🎮 How to Play</h2>
+                        <p><strong>Drag & Drop:</strong> Move animals to their correct category</p>
+                        <p><strong>Lives:</strong> You have 3 hearts. Don't make too many mistakes!</p>
+                        <p><strong>Combos:</strong> Get bonus points for consecutive correct answers</p>
+                        <p><strong>Hints:</strong> You can use 2 hints per round</p>
+                        <p><strong>Mystery Animals:</strong> Black cards give double points!</p>
+                        <p><strong>Boss Animals:</strong> Golden cards give triple points!</p>
+                        <p><strong>Learning Progress:</strong> Track your mastery of each category</p>
+                        <button class="control-button" onclick="hideModal()">Let's Play!</button>
+                    `;
+                    break;
+                    
+                case 'levelComplete':
+                    content.innerHTML = `
+                        <h2>🎉 Level ${data.level} Complete!</h2>
+                        <p class="congrats-message">${data.congratsMessage}</p>
+                        <p>Score: ${data.score}</p>
+                        <p>Accuracy: ${data.accuracy}%</p>
+                        <p>Learning Progress: ${data.learningProgress}</p>
+                        <p>Achievements:</p>
+                        <ul>
+                            <li>Perfect Levels: ${data.achievements.perfectLevels}</li>
+                            <li>Total Animals: ${data.achievements.totalAnimals}</li>
+                            <li>Highest Combo: ${data.achievements.highestCombo}x</li>
+                            ${data.achievements.fastestTime !== Infinity ? 
+                                `<li>Fastest Time: ${data.achievements.fastestTime}s</li>` : ''}
+                        </ul>
+                        <button class="control-button" onclick="nextLevel(); hideModal();">Next Level →</button>
+                    `;
+                    break;
+                    
+                case 'gameOver':
+                    content.innerHTML = `
+                        <h2>💔 Game Over</h2>
+                        <p class="game-over-reason">${data.reason}</p>
+                        <p>Final Score: ${data.score}</p>
+                        <p>Level Reached: ${data.level}</p>
+                        <p>Learning Progress: ${data.learningProgress}</p>
+                        <p>Achievements:</p>
+                        <ul>
+                            <li>Perfect Levels: ${data.achievements.perfectLevels}</li>
+                            <li>Total Animals: ${data.achievements.totalAnimals}</li>
+                            <li>Highest Combo: ${data.achievements.highestCombo}x</li>
+                        </ul>
+                        <button class="control-button" onclick="resetGame()">Try Again</button>
+                    `;
+                    break;
+                    
+                case 'gameComplete':
+                    content.innerHTML = `
+                        <h2>🏆 Game Complete!</h2>
+                        <p class="congrats-message">${data.congratsMessage}</p>
+                        <p>Final Score: ${data.score}</p>
+                        <p>Levels Completed: ${data.level}</p>
+                        <p>Final Accuracy: ${data.accuracy}%</p>
+                        <p>Learning Progress: ${data.learningProgress}</p>
+                        <p>Achievements:</p>
+                        <ul>
+                            <li>Perfect Levels: ${data.achievements.perfectLevels}</li>
+                            <li>Total Animals: ${data.achievements.totalAnimals}</li>
+                            <li>Highest Combo: ${data.achievements.highestCombo}x</li>
+                        </ul>
+                        <button class="control-button" onclick="resetGame(); hideModal();">Play Again</button>
+                    `;
+                    break;
+            }
+            
+            modal.style.display = 'flex';
+        }
+
+        function hideModal() {
+            const modal = document.getElementById('modal');
+            modal.style.display = 'none';
+            // Restore background scroll
+            document.body.style.overflow = '';
+        }
+
+        // Update submitLevel function to use the new calculation
+        function submitLevel() {
+            const remainingCards = document.querySelectorAll('#animalsContainer .animal-card');
+            if (remainingCards.length > 0) {
+                showFeedback('Please place all animals first!', false);
+                return;
+            }
+            
+            // Check if all animals are in correct categories
+            let allCorrect = true;
+            document.querySelectorAll('.category-bucket').forEach(bucket => {
+                const category = bucket.dataset.category;
+                const cards = bucket.querySelectorAll('.animal-card');
+                cards.forEach(card => {
+                    if (card.dataset.category !== category) {
+                        allCorrect = false;
+                    }
+                });
+            });
+            
+            if (allCorrect) {
+                gameState.level++;
+                showModal('levelComplete', {
+                    level: gameState.level - 1,
+                    score: Math.floor(gameState.score),
+                    accuracy: 100,
+                    learningProgress: calculateLearningProgress(),
+                    achievements: gameState.achievements,
+                    congratsMessage: `🎉 Level ${gameState.level - 1} Complete! Moving to Level ${gameState.level}! 🎉`
+                });
+            } else {
+                showFeedback('Some animals are in wrong categories!', false);
+            }
+        }
+
+        // Start game when page loads
+        window.addEventListener('load', initGame);
+    </script>
+
+</body></html>
